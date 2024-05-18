@@ -1,35 +1,46 @@
+import argparse
+import glob
+import os
 import cv2
 import multiprocessing
 import sys
 import json
+from dotenv import load_dotenv
 
-template_path = './files/templates/'
-# video_path = './files/in/2024-05-13 22-36-24.mkv'
-video_path = './files/in/2024-05-15_W_Blitz_2v2_SSvSS_Again.mp4'
-thread_count = 4
-similarity_ratio = 0.85
-kickback_ratio = 0.1
-skip_frames = 30
+load_dotenv()
 
-templates_in = [
-    'in_template_sov.png',
-    'in_template_allied.png'
-]
-templates_out = [
-    'out_template_sov.png',
-    'out_template_allied.png'
-]
+template_path = os.getenv('TEMPLATE_PATH', './files/templates/')
+thread_count = int(os.getenv('THREAD_COUNT', 4))
+similarity_ratio = float(os.getenv('SIMILARITY_RATIO', 0.85))
+kickback_ratio = float(os.getenv('KICKBACK_RATIO', 0.1))
+skip_frames = int(os.getenv('SKIP_FRAMES_COUNT', 30))
+
+template_in_file_pattern = os.getenv('TEMPLATE_IN_FILE', 'in*')
+template_out_file_pattern = os.getenv('TEMPLATE_OUT_FILE', 'out*')
+
+parser = argparse.ArgumentParser(
+                    prog='python find_keyframes.py',
+                    description='Find keyframes into a video based on template images.'
+)
+parser.add_argument('filename', help="Path to the video file to edit", type=str)
 
 
 def main():
-    print('RA2 - SMART VIDEO CUT 1.0')
+    print('find_keyframes 1.0 by wushaolin')
+    args = parser.parse_args()
+
+    path = os.path.abspath(args.filename)
+    print(' file to process: ' + path)
+    templates_in = find_templates_files(template_in_file_pattern)
+    templates_out = find_templates_files(template_out_file_pattern)
 
     cv2.setUseOptimized(True)
 
     in_grays = get_grays(templates_in)
     out_grays = get_grays(templates_out)
 
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     split_total_frames = round(total_frames / thread_count)
@@ -42,7 +53,7 @@ def main():
     for i in range(thread_count):
         t = multiprocessing.Process(
             target=process_segment,
-            args=(i, timecodes, split_frames_group[i], video_path, in_grays, out_grays)
+            args=(i, timecodes, split_frames_group[i], path, in_grays, out_grays)
         )
         processes.append(t)
         t.start()
@@ -51,11 +62,26 @@ def main():
         t.join()
 
     cv2.destroyAllWindows()
-    out = []
+    keyframes = []
     for proc in timecodes.values():
         for frame in proc:
-            out.append(frame)
-    sys.stdout.write(json.dumps(out))
+            keyframes.append(frame)
+
+    sys.stdout.write(json.dumps({
+        "file": path,
+        "end_time": total_frames / fps,
+        "keyframes": keyframes
+    }))
+
+
+def find_templates_files(pattern):
+    files = glob.glob(f'{template_path}/{pattern}')
+
+    out = []
+    for file in files:
+        out.append(os.path.basename(file))
+
+    return out
 
 
 def process_segment(thread_id, timecodes, segment, path, in_templates, out_templates):
