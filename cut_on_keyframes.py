@@ -18,11 +18,15 @@ parser = argparse.ArgumentParser(
 )
 parser.add_argument('--out', help='Directory where the video will be exported', default='./files/out')
 parser.add_argument('--keyframes', help='Json object holding keyframes and file path', default=None)
+parser.add_argument('--silent', action=argparse.BooleanOptionalAction)
 
 
 def main():
-    print('cut_on_keyframes 1.0 by wushaolin')
     args = parser.parse_args()
+    silent = args.silent
+
+    if not silent:
+        print('cut_on_keyframes 1.0 by wushaolin')
 
     out = args.out
     inputs = args.keyframes
@@ -34,14 +38,14 @@ def main():
     eof = inputs["end_time"]
 
     outfile = create_unique_filename(os.path.join(out, os.path.basename(file)))
-    print(outfile)
+    # print(outfile)
 
-    print('File to process : ' + file)
-    print('Keyframes : ' + json.dumps(inputs["keyframes"]))
+    # print('File to process : ' + file)
+    # print('Keyframes : ' + json.dumps(inputs["keyframes"]))
 
     keyframes = sorted(inputs["keyframes"], key=lambda d: d['frame'])
 
-    print('Sorted keyframes : ' + json.dumps(keyframes))
+    # print('Sorted keyframes : ' + json.dumps(keyframes))
 
     loop = True
     while loop:
@@ -68,7 +72,7 @@ def main():
         if not keyframes:
             loop = False
 
-    print('end')
+    # print('end')
 
 
 def read_from_stdin():
@@ -95,10 +99,10 @@ def create_unique_filename(filename):
         return filename
 
 
-def pop_first_of_type(keyframes, type):
+def pop_first_of_type(keyframes, entry_type):
     first_index = None
     for i, item in enumerate(keyframes):
-        if item["type"] == type:
+        if item["type"] == entry_type:
             first_index = i
             break
 
