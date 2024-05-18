@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse
 import datetime
 import json
@@ -7,6 +9,8 @@ import sys
 from dotenv import load_dotenv
 
 load_dotenv()
+
+ffmpeg_path = os.getenv('FFMPEG_PATH', 'ffmpeg')
 
 parser = argparse.ArgumentParser(
                     prog='python cut_on_keygrames.py',
@@ -51,7 +55,7 @@ def main():
             duration = int(eof) - start_at
 
         command = [
-            'ffmpeg',
+            ffmpeg_path,
             '-ss', format_seconds(start_at),
             '-i', file,
             '-to', format_seconds(duration),
