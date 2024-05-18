@@ -37,7 +37,6 @@ def main():
     file = inputs["file"]
     eof = inputs["end_time"]
 
-    outfile = create_unique_filename(os.path.join(out, os.path.basename(file)))
     # print(outfile)
 
     # print('File to process : ' + file)
@@ -48,7 +47,9 @@ def main():
     # print('Sorted keyframes : ' + json.dumps(keyframes))
 
     loop = True
+    i = 0
     while loop:
+        outfile = create_unique_filename(os.path.join(out, os.path.basename(file)), i)
         in_keyframe = pop_first_of_type(keyframes, 'in')
         out_keyframe = pop_first_of_type(keyframes, 'out')
 
@@ -69,6 +70,7 @@ def main():
 
         subprocess.run(command)
 
+        i += 1
         if not keyframes:
             loop = False
 
@@ -89,11 +91,11 @@ def format_seconds(seconds):
     return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
 
 
-def create_unique_filename(filename):
+def create_unique_filename(filename, index):
     if os.path.exists(filename):
         name, ext = os.path.splitext(filename)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        new_filename = f"{name}_{timestamp}{ext}"
+        new_filename = f"{name}_{index}_{timestamp}{ext}"
         return new_filename
     else:
         return filename
