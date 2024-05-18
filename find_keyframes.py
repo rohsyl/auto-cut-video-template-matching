@@ -12,27 +12,33 @@ from dotenv import load_dotenv
 load_dotenv()
 
 template_path = os.getenv('TEMPLATE_PATH', './files/templates/')
-thread_count = int(os.getenv('THREAD_COUNT', 4))
+process_count = int(os.getenv('PROCESS_COUNT', 4))
 similarity_ratio = float(os.getenv('SIMILARITY_RATIO', 0.85))
 kickback_ratio = float(os.getenv('KICKBACK_RATIO', 0.1))
 skip_frames = int(os.getenv('SKIP_FRAMES_COUNT', 30))
 
-template_in_file_pattern = os.getenv('TEMPLATE_IN_FILE', 'in*')
-template_out_file_pattern = os.getenv('TEMPLATE_OUT_FILE', 'out*')
+template_in_file_pattern = os.getenv('TEMPLATE_IN_FILE_PATTERN', 'in*')
+template_out_file_pattern = os.getenv('TEMPLATE_OUT_FILE_PATTERN', 'out*')
 
 parser = argparse.ArgumentParser(
-                    prog='python find_keyframes.py',
-                    description='Find keyframes into a video based on template images.'
+    prog='python find_keyframes.py',
+    description='Find keyframes into a video based on template images.'
 )
 parser.add_argument('filename', help="Path to the video file to edit", type=str)
+parser.add_argument('--silent', action=argparse.BooleanOptionalAction)
 
 
 def main():
-    print('find_keyframes 1.0 by wushaolin')
     args = parser.parse_args()
+    silent = args.silent
+
+    if not silent:
+        print('find_keyframes 1.0 by wushaolin')
 
     path = os.path.abspath(args.filename)
-    print(' file to process: ' + path)
+    if not silent:
+        print(' file to process: ' + path)
+
     templates_in = find_templates_files(template_in_file_pattern)
     templates_out = find_templates_files(template_out_file_pattern)
 
@@ -45,14 +51,14 @@ def main():
     fps = cap.get(cv2.CAP_PROP_FPS)
     total_frames = round(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
-    split_total_frames = round(total_frames / thread_count)
+    split_total_frames = round(total_frames / process_count)
     split_frames_group = split_frames_for_threads(total_frames, split_total_frames)
 
     manager = multiprocessing.Manager()
     timecodes = manager.dict()
 
     processes = []
-    for i in range(thread_count):
+    for i in range(process_count):
         t = multiprocessing.Process(
             target=process_segment,
             args=(i, timecodes, split_frames_group[i], path, in_grays, out_grays)
